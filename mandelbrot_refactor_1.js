@@ -67,7 +67,6 @@ function y_iter_func(a,b,c_y) {
 function animateCanvas(renderer) {
   const imgData = renderer.createImageData(1920, 1080);
   const data32 = new Uint32Array(imgData.data.buffer);
-  fillCanvas(renderer, "white");
   // Check every point in the grid
   let pixelCounter = 0;
   for(let i = 0; i<x_grid; ++i) {
