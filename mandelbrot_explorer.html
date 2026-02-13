@@ -185,6 +185,7 @@ document.getElementById('presetPoints').addEventListener('change', (e) => {
     document.getElementById('coordInput').value = `${x} + ${y}i`;
     document.getElementById('rangeInput').value = r;
     render();
+    e.target.value = "none";
 });
 
 // Canvas Click to Center & Zoom
@@ -202,6 +203,7 @@ canvas.addEventListener('mousedown', (e) => {
     
     document.getElementById('coordInput').value = `${newX} + ${newY}i`;
     document.getElementById('rangeInput').value = (range * 0.2).toExponential(10);
+    render();
 });
 
 document.getElementById('renderBtn').addEventListener('click', render);
