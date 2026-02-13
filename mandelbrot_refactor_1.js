@@ -12,6 +12,7 @@ const y_grid = 1080;
 //const x_offset = 0.42884;
 //const y_offset = -0.231345;
 
+
 // Other fun points
 
 //const x_offset = -1.8;
@@ -19,8 +20,7 @@ const y_grid = 1080;
 let x_offset = -1.42884;
 let y_offset = 0;
 
-// Initially the plot is x from -2 to 2
-// and y from -2 to 2 but zooming changes it
+// Modified to match aspect ratio
 let x_range = 16;
 let y_range = 9;
 
