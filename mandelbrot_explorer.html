@@ -108,8 +108,10 @@ function render() {
     const x_rng_bi = BigInt(Math.floor((range * (canvas.width/canvas.height)) * Number(SCALE)));
     const escape_limit = 4n << PRECISION_BITS;
 
-    const canMirror = Math.abs(y_off) < 1e-18; 
-    const totalTargetRows = canMirror ? canvas.height / 2 : canvas.height;
+    // NEW: We always want to process all rows now, but we'll use a 
+    // Set to keep track of which rows we've already "filled" via mirroring.
+    const renderedRows = new Set();
+    const totalTargetRows = canvas.height;
 
     const lut = [];
     for (let i = 0; i < max_iter; i++) {
@@ -128,7 +130,14 @@ function render() {
         const endRow = Math.min(j + chunkHeight, totalTargetRows);
 
         for (; j < endRow; j += step) {
+            // NEW: Skip this row if it was already mirrored from a previous pass
+            if (renderedRows.has(j)) continue;
+
             const y_val = (y_rng_bi * BigInt(j) / BigInt(canvas.height) - y_rng_bi / 2n) + y_off_bi;
+            
+            // NEW: Calculate where the mirrored row would be (y -> -y)
+            // This finds the row index for the negative version of our current Y coordinate
+            const jMirror = Number((( -y_val - (y_off_bi - y_rng_bi / 2n)) * BigInt(canvas.height)) / y_rng_bi);
 
             for (let i = 0; i < canvas.width; i += step) {
                 const x_val = (x_rng_bi * BigInt(i) / BigInt(canvas.width) - x_rng_bi / 2n) + x_off_bi;
@@ -159,10 +168,15 @@ function render() {
 
                 ctx.fillStyle = lut[iteration];
                 ctx.fillRect(i, j, step, step);
-                if (canMirror) {
-                    ctx.fillRect(i, canvas.height - j - step, step, step);
+
+                // NEW: If jMirror is on screen and not the current row, fill it!
+                if (jMirror >= 0 && jMirror < canvas.height && jMirror !== j) {
+                    ctx.fillRect(i, jMirror, step, step);
                 }
             }
+            // NEW: Mark both rows as "done"
+            renderedRows.add(j);
+            if (jMirror >= 0 && jMirror < canvas.height) renderedRows.add(jMirror);
         }
 
         if (j < totalTargetRows) {
