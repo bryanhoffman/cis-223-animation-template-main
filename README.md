@@ -8,7 +8,9 @@
 
 ![Screenshot](fractal_export(3).png)
 
-![Screenshot](fractal.png)
+![Screenshot](fractal(2).png)
+
+![Screenshot](fractal(3).png)
 
 A high-performance, arbitrary-precision Mandelbrot set explorer built with vanilla JavaScript. This engine utilizes BigInt math to bypass standard 64-bit floating-point limitations, allowing for deep-zoom exploration.
 
