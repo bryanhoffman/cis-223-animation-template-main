@@ -4,8 +4,6 @@
 
 ![Screenshot](fractal_export(1).png)
 
-![Screenshot](fractal_export(2).png)
-
 ![Screenshot](fractal_export(3).png)
 
 ![Screenshot](fractal(2).png)
