@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { background: #1a1a1a; color: #eee; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        #toolbar { background: #333; padding: 10px; border-radius: 8px; margin: 10px; display: flex; gap: 15px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        canvas { border: 2px solid #444; cursor: crosshair; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .stat { font-family: monospace; font-size: 0.9em; color: #00ffcc; }
+        button { background: #444; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #666; }
+        button:disabled { color: #888; cursor: not-allowed; }
+        #modeIndicator { font-weight: bold; padding: 2px 6px; border-radius: 3px; }
+        .tourist { background: #2e7d32; } /* Green */
+        .explorer { background: #c62828; } /* Red */
+    </style>
+</head>
+<body>
+
+<div id="toolbar">
+    <button id="backBtn" onclick="goBack()" disabled>← Back</button>
+    <div class="stat">Zoom: <span id="zoomLevel">1.00</span></div>
+    <div class="stat">Mode: <span id="modeIndicator" class="tourist">TOURIST</span></div>
+    <button onclick="resetView()">Reset</button>
+</div>
+
+<canvas id="fCanvas" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('fCanvas');
+const ctx = canvas.getContext('2d');
+const zoomText = document.getElementById('zoomLevel');
+const modeInd = document.getElementById('modeIndicator');
+const backBtn = document.getElementById('backBtn');
+
+// --- STATE MANAGEMENT ---
+let state = {
+    r: -0.74364388703715,
+    i: 0.13182590420642,
+    zoom: 0.005,
+    maxIter: 500
+};
+let history = [];
+
+// --- THE HYBRID ENGINE ---
+function render() {
+    const width = canvas.width;
+    const height = canvas.height;
+    const imgData = ctx.createImageData(width, height);
+    
+    // Switch Modes based on Zoom Depth
+    const isExplorer = state.zoom < 1e-13; 
+    modeInd.innerText = isExplorer ? "EXPLORER (Perturbation)" : "TOURIST (Standard)";
+    modeInd.className = isExplorer ? "explorer" : "tourist";
+    
+    // 1. Generate Reference (For either mode, but vital for Explorer)
+    let refR = new Float64Array(state.maxIter);
+    let refI = new Float64Array(state.maxIter);
+    let zr = state.r, zi = state.i;
+    for (let n = 0; n < state.maxIter; n++) {
+        refR[n] = zr; refI[n] = zi;
+        let r2 = zr*zr, i2 = zi*zi;
+        if (r2 + i2 > 4) break;
+        zi = 2 * zr * zi + state.i;
+        zr = r2 - i2 + state.r;
+    }
+
+    // 2. Main Pixel Loop
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let dx = (x - width/2) * (state.zoom / width);
+            let dy = (y - height/2) * (state.zoom / width);
+            
+            let iter = 0;
+            if (isExplorer) {
+                // Perturbation Logic: dz_next = 2*Z*dz + dz^2 + dc
+                let dzR = 0, dzI = 0;
+                while (iter < state.maxIter) {
+                    let zr_n = refR[iter], zi_n = refI[iter];
+                    let tr = 2 * (zr_n * dzR - zi_n * dzI);
+                    let ti = 2 * (zr_n * dzI + zi_n * dzR);
+                    let dzR2 = dzR * dzR, dzI2 = dzI * dzI;
+                    dzR = tr + (dzR2 - dzI2) + dx;
+                    dzI = ti + (2 * dzR * dzI) + dy;
+                    if ((zr_n + dzR)**2 + (zi_n + dzI)**2 > 4) break;
+                    iter++;
+                }
+            } else {
+                // Standard Escape Time
+                let cr = state.r + dx, ci = state.i + dy;
+                let zr_s = 0, zi_s = 0;
+                while (iter < state.maxIter) {
+                    let r2 = zr_s*zr_s, i2 = zi_s*zi_s;
+                    if (r2 + i2 > 4) break;
+                    zi_s = 2 * zr_s * zi_s + ci;
+                    zr_s = r2 - i2 + cr;
+                    iter++;
+                }
+            }
+
+            // Coloring
+            let p = (y * width + x) * 4;
+            let c = iter === state.maxIter ? 0 : (iter % 255);
+            imgData.data[p] = c * 3;     // R
+            imgData.data[p+1] = c * 5;   // G
+            imgData.data[p+2] = c * 10;  // B
+            imgData.data[p+3] = 255;     // A
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    zoomText.innerText = (1 / state.zoom).toExponential(2);
+    backBtn.disabled = history.length === 0;
+}
+
+// --- INTERACTION ---
+canvas.onclick = (e) => {
+    // Push current to history before changing
+    history.push({...state});
+    
+    // Calculate new center
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    state.r += (mouseX - canvas.width/2) * (state.zoom / canvas.width);
+    state.i += (mouseY - canvas.height/2) * (state.zoom / canvas.width);
+    state.zoom *= 0.1; // Zoom in 10x
+    state.maxIter += 100; // Increase detail as we go
+    render();
+};
+
+function goBack() {
+    if (history.length > 0) {
+        state = history.pop();
+        render();
+    }
+}
+
+function resetView() {
+    history.push({...state});
+    state = { r: -0.75, i: 0.1, zoom: 2.5, maxIter: 200 };
+    render();
+}
+
+// Initial Render
+render();
+</script>
+</body>
+</html>
