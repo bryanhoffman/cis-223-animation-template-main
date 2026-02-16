@@ -1,229 +1,289 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Mandelbrot Explorer Pro</title>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mandelbrot Explorer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
-        body { margin: 0; background: #111; color: #eee; font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; }
-        #sidebar { width: 320px; background: #222; padding: 20px; border-right: 1px solid #444; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
-        .group { margin-bottom: 15px; }
-        label { display: block; font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-        input, textarea, select { width: 100%; background: #000; border: 1px solid #444; color: #0f0; padding: 10px; box-sizing: border-box; font-family: 'Courier New', monospace; border-radius: 4px; }
-        button { width: 100%; padding: 12px; margin-top: 10px; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; transition: 0.2s; }
-        #renderBtn { background: #3498db; color: white; }
-        #renderBtn:hover { background: #2980b9; }
-        #saveBtn { background: #27ae60; color: white; }
-        #status { margin-top: 20px; color: #f1c40f; font-family: monospace; font-size: 13px; background: #000; padding: 10px; border-radius: 4px; border: 1px solid #333; }
-        #viewer { flex-grow: 1; display: flex; align-items: center; justify-content: center; background: #050505; position: relative; }
-        canvas { box-shadow: 0 0 50px #000; cursor: crosshair; background: #000; }
-        h2 { margin-top: 0; color: #3498db; }
+      body {
+        background: #050505;
+        color: #eee;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 20px;
+      }
+      #toolbar {
+        background: #1a1a1a;
+        padding: 12px 25px;
+        border-radius: 50px;
+        margin-bottom: 15px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        border: 1px solid #333;
+      }
+      canvas {
+        border-radius: 8px;
+        cursor: crosshair;
+        box-shadow: 0 0 40px rgba(0, 255, 204, 0.15);
+        background: black;
+        border: 1px solid #222;
+      }
+      .stat {
+        font-family: monospace;
+        font-size: 0.85em;
+        color: #00ffcc;
+        text-transform: uppercase;
+      }
+      input {
+        background: #000;
+        color: #00ffcc;
+        border: 1px solid #444;
+        border-radius: 20px;
+        padding: 6px 15px;
+        width: 340px;
+        font-family: monospace;
+        outline: none;
+      }
+      button {
+        background: #222;
+        color: white;
+        border: 1px solid #444;
+        padding: 8px 18px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 0.8em;
+      }
+      button:hover {
+        border-color: #00ffcc;
+        color: #00ffcc;
+      }
+      #modeIndicator {
+        font-size: 0.7em;
+        padding: 3px 8px;
+        border-radius: 10px;
+        border: 1px solid currentColor;
+        font-weight: bold;
+      }
+      .tourist {
+        color: #4caf50;
+      }
+      .explorer {
+        color: #ff3366;
+        text-shadow: 0 0 5px #ff3366;
+      }
+      .instructions {
+        margin-top: 15px;
+        font-size: 0.85em;
+        color: #888;
+        text-align: center;
+      }
     </style>
-</head>
-<body>
-
-<div id="sidebar">
-    <h2>FRACTAL ENGINE</h2>
-    
-    <div class="group">
-        <label>Famous Locations</label>
-        <select id="presetPoints">
-            <option value="none">-- Select a Spot --</option>
-            <option value="-0.5, 0, 4.0">Full View (Default)</option>
-            <option value="-0.74364388703715, 0.13182590420642, 0.0001">Seahorse Valley</option>
-            <option value="-1.786444855998, 0, 0.0001">Triple Spiral</option>
-            <option value="0.275, 0, 0.1">Elephant Valley</option>
-            <option value="-0.52303311455273, 0.52633594081346, 0.0001">Mini-Mandelbrot</option>
-        </select>
+  </head>
+  <body>
+    <div id="toolbar">
+      <button onclick="goBack()" id="backBtn" disabled>PREVIOUS</button>
+      <button onclick="resetView()">RESET</button>
+      <div style="display: flex; gap: 5px">
+        <input
+          list="locations"
+          id="coordInput"
+          placeholder="a + bi"
+          onfocus="this.value = ''"
+          onchange="this.blur()"
+        />
+        <datalist id="locations">
+          <option value="-0.743643887 + 0.131825904i | Z: 5e4 | I: 1000">
+            Seahorse Valley
+          </option>
+          <option value="-0.743644786 + 0.131825963i | Z: 1e14 | I: 5000">
+            The Heart of the Spiral
+          </option>
+          <option value="-0.00164 + 0.82246i | Z: 1e3 | I: 800">
+            The Dragon Tail
+          </option>
+        </datalist>
+        <button onclick="jumpToCoord()">JUMP</button>
+      </div>
+      <div class="stat">Z: <span id="zoomLevel">1.0</span></div>
+      <div id="modeIndicator" class="tourist">TOURIST</div>
+      <button onclick="saveImage()" style="color: #4fa3ff">SAVE PNG</button>
     </div>
 
-    <div class="group">
-        <label>Coordinate (a + bi)</label>
-        <textarea id="coordInput" rows="3">-0.5 + 0i</textarea>
-    </div>
-    
-    <div class="group">
-        <label>Zoom (Range)</label>
-        <input type="text" id="rangeInput" value="4.0">
-    </div>
-    
-    <div class="group">
-        <label>Detail (Iterations)</label>
-        <input type="number" id="iterInput" value="500">
+    <canvas id="fCanvas" width="900" height="600"></canvas>
+
+    <div class="instructions">
+      Click anywhere to zoom in at 5 times depth. Double click the input to get
+      example spots.<br />
+      You can Reset to get the fullset or recover your past images by .
     </div>
 
-    <div class="group">
-        <label>Quality (Step)</label>
-        <select id="stepInput">
-            <option value="4">Draft (Fast)</option>
-            <option value="2">Medium</option>
-            <option value="1" selected>High (Detail)</option>
-        </select>
-    </div>
+    <script>
+      const canvas = document.getElementById("fCanvas");
+      const ctx = canvas.getContext("2d");
+      const zoomText = document.getElementById("zoomLevel");
+      const modeInd = document.getElementById("modeIndicator");
+      const backBtn = document.getElementById("backBtn");
+      const coordInput = document.getElementById("coordInput");
 
-    <button id="renderBtn">RENDER VIEW</button>
-    <button id="saveBtn">SAVE PNG</button>
-    
-    <div id="status">Ready. Click Render.</div>
-</div>
+      const initialState = { r: -0.5, i: 0, zoom: 3.0, maxIter: 150 };
+      let state = { ...initialState };
+      let history = [];
 
-<div id="viewer">
-    <canvas id="mainCanvas"></canvas>
-</div>
+      function render() {
+        const { width, height } = canvas;
+        const imgData = ctx.createImageData(width, height);
+        const isExplorer = state.zoom < 1e-12;
 
-<script>
-const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d', { alpha: false });
-const PRECISION_BITS = 120n; 
-const SCALE = 1n << PRECISION_BITS;
+        modeInd.innerText = isExplorer ? "EXPLORER (STABILIZED)" : "TOURIST";
+        modeInd.className = isExplorer ? "explorer" : "tourist";
 
-canvas.width = 1280;
-canvas.height = 720;
+        // 1. Reference Orbit
+        let refR = new Float64Array(state.maxIter);
+        let refI = new Float64Array(state.maxIter);
+        let zr = state.r,
+          zi = state.i,
+          refEscaped = false;
 
-function hslToRgb(h, s, l) {
-    s /= 100; l /= 100;
-    const k = n => (n + h / 30) % 12;
-    const a = s * Math.min(l, 1 - l);
-    const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
-    const r = Math.round(255 * f(0)), g = Math.round(255 * f(8)), b = Math.round(255 * f(4));
-    return `rgb(${r},${g},${b})`;
-}
+        for (let n = 0; n < state.maxIter; n++) {
+          refR[n] = zr;
+          refI[n] = zi;
+          let r2 = zr * zr,
+            i2 = zi * zi;
+          if (r2 + i2 > 4) {
+            refEscaped = true;
+            break;
+          }
+          zi = 2 * zr * zi + state.i;
+          zr = r2 - i2 + state.r;
+        }
 
-let isRendering = false;
+        // 2. Symmetry Logic
+        const isSymmetric = Math.abs(state.i) < (state.zoom / height) * 0.5;
+        const maxY = isSymmetric ? Math.ceil(height / 2) : height;
 
-function render() {
-    if (isRendering) return;
-    isRendering = true;
+        // 3. Render Loop
+        for (let y = 0; y < maxY; y++) {
+          for (let x = 0; x < width; x++) {
+            let dx = (x - width / 2) * (state.zoom / width);
+            let dy = (y - height / 2) * (state.zoom / width);
+            let iter = 0;
 
-    const status = document.getElementById('status');
-    const coords = document.getElementById('coordInput').value.match(/[-+]?[0-9]*\.?[0-9]+/g);
-    const x_off = parseFloat(coords[0]);
-    const y_off = parseFloat(coords[1]);
-    const range = parseFloat(document.getElementById('rangeInput').value);
-    const max_iter = parseInt(document.getElementById('iterInput').value);
-    const step = parseInt(document.getElementById('stepInput').value);
-
-    const x_off_bi = BigInt(Math.floor(x_off * Number(SCALE)));
-    const y_off_bi = BigInt(Math.floor(y_off * Number(SCALE)));
-    const y_rng_bi = BigInt(Math.floor(range * Number(SCALE)));
-    const x_rng_bi = BigInt(Math.floor((range * (canvas.width/canvas.height)) * Number(SCALE)));
-    const escape_limit = 4n << PRECISION_BITS;
-
-    // NEW: We always want to process all rows now, but we'll use a 
-    // Set to keep track of which rows we've already "filled" via mirroring.
-    const renderedRows = new Set();
-    const totalTargetRows = canvas.height;
-
-    const lut = [];
-    for (let i = 0; i < max_iter; i++) {
-        lut[i] = hslToRgb((i * 3) % 360, 100, 50);
-    }
-    lut[max_iter] = "#000000";
-
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    let j = 0;
-    const startTime = performance.now();
-
-    function renderChunk() {
-        const chunkHeight = 16; 
-        const endRow = Math.min(j + chunkHeight, totalTargetRows);
-
-        for (; j < endRow; j += step) {
-            // NEW: Skip this row if it was already mirrored from a previous pass
-            if (renderedRows.has(j)) continue;
-
-            const y_val = (y_rng_bi * BigInt(j) / BigInt(canvas.height) - y_rng_bi / 2n) + y_off_bi;
-            
-            // NEW: Calculate where the mirrored row would be (y -> -y)
-            // This finds the row index for the negative version of our current Y coordinate
-            const jMirror = Number((( -y_val - (y_off_bi - y_rng_bi / 2n)) * BigInt(canvas.height)) / y_rng_bi);
-
-            for (let i = 0; i < canvas.width; i += step) {
-                const x_val = (x_rng_bi * BigInt(i) / BigInt(canvas.width) - x_rng_bi / 2n) + x_off_bi;
-
-                let x_iter = x_val, y_iter = y_val, iteration = max_iter;
-                let x_old = 0n, y_old = 0n;
-
-                for (let k = 0; k < max_iter; k++) {
-                    const x2 = (x_iter * x_iter) >> PRECISION_BITS;
-                    const y2 = (y_iter * y_iter) >> PRECISION_BITS;
-                    
-                    if (x2 + y2 > escape_limit) { 
-                        iteration = k; 
-                        break; 
-                    }
-
-                    if ((k & 15) === 0) {
-                        if (x_iter === x_old && y_iter === y_old) { 
-                            iteration = max_iter; 
-                            break; 
-                        }
-                        x_old = x_iter; y_old = y_iter;
-                    }
-
-                    y_iter = ((x_iter * y_iter) >> (PRECISION_BITS - 1n)) + y_val;
-                    x_iter = x2 - y2 + x_val;
-                }
-
-                ctx.fillStyle = lut[iteration];
-                ctx.fillRect(i, j, step, step);
-
-                // NEW: If jMirror is on screen and not the current row, fill it!
-                if (jMirror >= 0 && jMirror < canvas.height && jMirror !== j) {
-                    ctx.fillRect(i, jMirror, step, step);
-                }
+            if (isExplorer && !refEscaped) {
+              let dzR = 0,
+                dzI = 0;
+              while (iter < state.maxIter) {
+                let zr_n = refR[iter],
+                  zi_n = refI[iter];
+                let tr =
+                  2 * (zr_n * dzR - zi_n * dzI) + (dzR * dzR - dzI * dzI) + dx;
+                let ti = 2 * (zr_n * dzI + zi_n * dzR) + 2 * dzR * dzI + dy;
+                dzR = tr;
+                dzI = ti;
+                // RECONSTRUCTED ESCAPE CHECK
+                if ((zr_n + dzR) ** 2 + (zi_n + dzI) ** 2 > 4) break;
+                iter++;
+              }
+            } else {
+              let cr = state.r + dx,
+                ci = state.i + dy,
+                zr_s = 0,
+                zi_s = 0;
+              while (iter < state.maxIter) {
+                let r2 = zr_s * zr_s,
+                  i2 = zi_s * zi_s;
+                if (r2 + i2 > 4) break;
+                zi_s = 2 * zr_s * zi_s + ci;
+                zr_s = r2 - i2 + cr;
+                iter++;
+              }
             }
-            // NEW: Mark both rows as "done"
-            renderedRows.add(j);
-            if (jMirror >= 0 && jMirror < canvas.height) renderedRows.add(jMirror);
+
+            let p = (y * width + x) * 4;
+            let r = 0,
+              g = 0,
+              b = 0;
+            if (iter < state.maxIter) {
+              let s = iter * 0.15;
+              r = Math.sin(s) * 127 + 128;
+              g = Math.sin(s + 2.09) * 127 + 128;
+              b = Math.sin(s + 4.18) * 127 + 128;
+            }
+
+            imgData.data[p] = r;
+            imgData.data[p + 1] = g;
+            imgData.data[p + 2] = b;
+            imgData.data[p + 3] = 255;
+            if (isSymmetric) {
+              let p2 = ((height - 1 - y) * width + x) * 4;
+              imgData.data[p2] = r;
+              imgData.data[p2 + 1] = g;
+              imgData.data[p2 + 2] = b;
+              imgData.data[p2 + 3] = 255;
+            }
+          }
         }
+        ctx.putImageData(imgData, 0, 0);
 
-        if (j < totalTargetRows) {
-            const percent = Math.min(100, Math.round((j / totalTargetRows) * 100));
-            status.innerText = `Progress: ${percent}%`;
-            requestAnimationFrame(renderChunk);
-        } else {
-            const totalTime = Math.round(performance.now() - startTime);
-            status.innerText = `Done: ${totalTime}ms`;
-            isRendering = false;
+        if (document.activeElement !== coordInput) {
+          coordInput.value = `${state.r.toPrecision(12)} ${state.i >= 0 ? "+" : "-"} ${Math.abs(state.i).toPrecision(12)}i`;
         }
-    }
-    renderChunk();
-}
+        zoomText.innerText = (3.0 / state.zoom).toExponential(2);
+        backBtn.disabled = history.length === 0;
+      }
 
-// Coordinate preset listener
-document.getElementById('presetPoints').addEventListener('change', (e) => {
-    if (e.target.value === "none") return;
-    const [x, y, r] = e.target.value.split(',').map(s => s.trim());
-    document.getElementById('coordInput').value = `${x} + ${y}i`;
-    document.getElementById('rangeInput').value = r;
-    render();
-    e.target.value = "none";
-});
+      function jumpToCoord() {
+        const val = coordInput.value;
+        const match = val.match(
+          /([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*([-+]\s*\d*\.?\d+(?:e[-+]?\d+)?)i(?:\s*\|\s*Z:\s*([\d.e+-]+))?(?:\s*\|\s*I:\s*(\d+))?/i,
+        );
+        if (match) {
+          history.push({ ...state });
+          state.r = parseFloat(match[1]);
+          state.i = parseFloat(match[2].replace(/\s+/g, ""));
+          if (match[3]) state.zoom = 3.0 / parseFloat(match[3]);
+          if (match[4]) state.maxIter = parseInt(match[4]);
+          render();
+        }
+      }
 
-// Canvas Click to Center & Zoom
-canvas.addEventListener('mousedown', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const px = (e.clientX - rect.left) / rect.width;
-    const py = (e.clientY - rect.top) / rect.height;
-    
-    const coords = document.getElementById('coordInput').value.match(/[-+]?[0-9]*\.?[0-9]+/g);
-    const range = parseFloat(document.getElementById('rangeInput').value);
-    const aspect = canvas.width / canvas.height;
-    
-    const newX = parseFloat(coords[0]) + (px - 0.5) * (range * aspect);
-    const newY = parseFloat(coords[1]) + (py - 0.5) * range;
-    
-    document.getElementById('coordInput').value = `${newX} + ${newY}i`;
-    document.getElementById('rangeInput').value = (range * 0.2).toExponential(10);
-    render();
-});
+      canvas.onclick = (e) => {
+        history.push({ ...state });
+        const rect = canvas.getBoundingClientRect();
+        state.r +=
+          (e.clientX - rect.left - canvas.width / 2) *
+          (state.zoom / canvas.width);
+        state.i +=
+          (e.clientY - rect.top - canvas.height / 2) *
+          (state.zoom / canvas.width);
+        state.zoom *= 0.2;
+        state.maxIter = Math.floor(state.maxIter * 1.12);
+        render();
+      };
 
-document.getElementById('renderBtn').addEventListener('click', render);
-document.getElementById('saveBtn').addEventListener('click', () => {
-    canvas.toBlob(blob => saveAs(blob, "fractal_export.png"));
-});
-</script>
-</body>
+      function goBack() {
+        if (history.length > 0) {
+          state = history.pop();
+          render();
+        }
+      }
+      function resetView() {
+        history.push({ ...state });
+        state = { ...initialState };
+        render();
+      }
+      function saveImage() {
+        canvas.toBlob((b) => saveAs(b, `mandel_${coordInput.value}.png`));
+      }
+      render();
+    </script>
+  </body>
 </html>
